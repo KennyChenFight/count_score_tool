@@ -231,6 +231,7 @@ class CountScoreTool:
                     elif word_score > 0:
                         single_word_score[word] = word_score
                     not_exist = False
+                    break
 
             if not_exist:
                 not_exist_words.add(word)
