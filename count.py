@@ -131,8 +131,8 @@ class CountScoreTool:
             for line in f:
                 pron_count = []
                 words_line = line.strip().split(',')[2:]
-                # 判斷字典裡的字是不是出現在文字基底文字中，並且次數需要大於0，才算進去
-                word_list = [word for word in words_line if word in sentence_base_words_count and sentence_base_words_count[word] > 0]
+                # 判斷字典裡的字是不是出現在文字基底文字中，才算進去
+                word_list = [word for word in words_line if word in sentence_base_words_count]
                 # 加總同一音節單元的全部count次數
                 sum_count = 0
                 words_count = []

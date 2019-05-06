@@ -19,6 +19,7 @@ class AppWindow(QMainWindow):
         self.ui.pb_analysis_pron_count_file.clicked.connect(self.analysis_pron_count_file_click)
         self.ui.pb_sentences_file.clicked.connect(self.calculate_sentences_file_click)
         self.ui.pb_sentence.clicked.connect(self.calculate_sentence_click)
+        self.ui.le_sentence.returnPressed.connect(self.calculate_sentence_click)
 
     def word_dict_file_click(self):
         filepath, filetype = QFileDialog. \
@@ -154,7 +155,7 @@ sys.exit(app.exec_())
 # tool.analysis_pron_count_file()
 # print(tool.calculate_sentence_score('為臨帖他還遠遊西安碑林龍門石窟泰山摩崖石刻'))
 # tool.calculate_sentences_score('sentence_3000.txt', 'sentence_3000_score.txt', SortType.SORT_BY_WORD_COUNT_REVERSE)
-#
+
 
 
 
