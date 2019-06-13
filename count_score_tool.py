@@ -1,298 +1,177 @@
-# -*- coding: utf-8 -*-
+from count import CountScoreTool, SortType
+import sys
+from count_score_tool_ui import Ui_MainWindow, QtGui
+from PyQt5.QtWidgets import QApplication, QFileDialog, QMessageBox, QPushButton, QMainWindow
 
-# Form implementation generated from reading ui file 'count_score_tool.ui'
+
+class AppWindow(QMainWindow):
+    tool = None
+
+    def __init__(self):
+        super().__init__()
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.ui.pb_word_dict_file.clicked.connect(self.word_dict_file_click)
+        self.ui.pb_pron_compare_file.clicked.connect(self.pron_compare_file_click)
+        self.ui.pb_sentence_base_dir.clicked.connect(self.sentence_base_file_dir_click)
+        self.ui.pb_pron_count_file.clicked.connect(self.pron_count_file_click)
+        self.ui.pb_produce_pron_count_file.clicked.connect(self.produce_pron_file_click)
+        self.ui.pb_analysis_pron_count_file.clicked.connect(self.analysis_pron_count_file_click)
+        self.ui.pb_sentences_file.clicked.connect(self.calculate_sentences_file_click)
+        self.ui.pb_sentence.clicked.connect(self.calculate_sentence_click)
+        self.ui.le_sentence.returnPressed.connect(self.calculate_sentence_click)
+
+    def word_dict_file_click(self):
+        filepath, filetype = QFileDialog. \
+            getOpenFileName(self,
+                            "選取文件",
+                            "./",
+                            "Text Files (*.txt)")
+        self.ui.le_word_dict_file.setText(filepath)
+
+    def pron_compare_file_click(self):
+        filepath, filetype = QFileDialog. \
+            getSaveFileName(self,
+                            "選取文件",
+                            "./",
+                            "Text Files (*.txt)")
+        self.ui.le_pron_compare_file.setText(filepath)
+
+    def sentence_base_file_dir_click(self):
+        dir = QFileDialog.getExistingDirectory(self,
+                                               '選取資料夾',
+                                               './')
+        self.ui.le_sentence_base_dir.setText(dir)
+
+    def pron_count_file_click(self):
+        filepath, filetype = QFileDialog. \
+            getSaveFileName(self,
+                            "選取文件",
+                            "./",
+                            "Text Files (*.txt)")
+        self.ui.le_pron_count_file.setText(filepath)
+
+    def produce_pron_file_click(self):
+        word_dict_file = self.ui.le_word_dict_file.text()
+        pron_compare_file = self.ui.le_pron_compare_file.text()
+        sentence_base_dir = self.ui.le_sentence_base_dir.text()
+        pron_count_file = self.ui.le_pron_count_file.text()
+        self.tool = CountScoreTool(word_dict_file, pron_compare_file,
+                                   sentence_base_dir, pron_count_file)
+
+        msgBox = QMessageBox()
+        msgBox.setText('要如何排序?')
+        msgBox.addButton(QPushButton('count排序由小到大'), QMessageBox.YesRole)
+        msgBox.addButton(QPushButton('count排序由大到小'), QMessageBox.NoRole)
+        msgBox.addButton(QPushButton('依照拼音字母排序'), QMessageBox.RejectRole)
+        ret = msgBox.exec()
+
+        if ret == 0:
+            sort_type = SortType.SORT_BY_WORD_COUNT
+        elif ret == 1:
+            sort_type = SortType.SORT_BY_WORD_COUNT_REVERSE
+        else:
+            sort_type = SortType.SORT_BY_ALPHABETICALLY
+
+        self.tool.produce_pron_compare_file(SortType.SORT_BY_ALPHABETICALLY)
+        self.tool.check_sentence_base_file()
+        self.tool.produce_pron_count_file(sort_type)
+        QMessageBox.information(self,
+                                '>_<',
+                                '檔案產生成功!',
+                                QMessageBox.Yes)
+
+        error_sentence_base = self.tool.incorrect_sentence_base_path
+        message = ''
+        for key, value in error_sentence_base.items():
+            message += key + '\t' + value + '\n'
+        self.ui.tb_error_sentence_base.setText(message)
+
+    def analysis_pron_count_file_click(self):
+        analysis = self.tool.analysis_pron_count_file()
+
+        message = ''
+        for key, value in analysis.items():
+            message += key + ':' + value + '\n'
+
+        QMessageBox.information(self,
+                                '>_<',
+                                '涵蓋率分析:'
+                                + '\n' + message,
+                                QMessageBox.Yes)
+
+    def calculate_sentences_file_click(self):
+        source_file_path, filetype = QFileDialog. \
+            getOpenFileName(self,
+                            "選取句子檔案文件",
+                            "./",
+                            "Text Files (*.txt)")
+        dest_file_path, filetype = QFileDialog. \
+            getSaveFileName(self,
+                            "選取文件",
+                            "./",
+                            "Text Files (*.txt)")
+        msgBox = QMessageBox()
+        msgBox.setText('積分檔案要如何排序?')
+        msgBox.addButton(QPushButton('平均積分排序由小到大'), QMessageBox.YesRole)
+        msgBox.addButton(QPushButton('平均積分排序由大到小'), QMessageBox.NoRole)
+        ret = msgBox.exec()
+
+        if ret == 0:
+            sort_type = SortType.SORT_BY_WORD_COUNT
+        elif ret == 1:
+            sort_type = SortType.SORT_BY_WORD_COUNT_REVERSE
+
+        self.tool.calculate_sentences_score(source_file_path, dest_file_path, sort_type)
+
+        QMessageBox.information(self,
+                                '>_<',
+                                '積分檔案產生成功!',
+                                QMessageBox.Yes)
+
+    def calculate_sentence_click(self):
+        sentence = self.ui.le_sentence.text()
+        score = self.tool.calculate_sentence_score(sentence)
+        self.ui.tb_sentence_score.setText(''.join(score))
+
+
+app = QApplication(sys.argv)
+w = AppWindow()
+w.show()
+sys.exit(app.exec_())
+
+
+# word_dict_file = 'WordData_1227.txt'
+# pron_compare_file = 'pron_compare.txt'
+# sentence_base_dir = '文字基底/txt'
+# pron_count_file = 'pron_count.txt'
 #
-# Created by: PyQt5 UI code generator 5.11.3
+# tool = CountScoreTool(word_dict_file, pron_compare_file,
+#                       sentence_base_dir, pron_count_file)
 #
-# WARNING! All changes made in this file will be lost!
+# tool.produce_pron_compare_file(SortType.SORT_BY_ALPHABETICALLY)
+# tool.check_sentence_base_file()
+# tool.produce_pron_count_file(SortType.SORT_BY_WORD_COUNT_REVERSE)
+# tool.analysis_pron_count_file()
+# print(tool.calculate_sentence_score('為臨帖他還遠遊西安碑林龍門石窟泰山摩崖石刻'))
+# tool.calculate_sentences_score('sentence_3000.txt', 'sentence_3000_score.txt', SortType.SORT_BY_WORD_COUNT_REVERSE)
 
-from PyQt5 import QtCore, QtGui, QtWidgets
 
-class Ui_MainWindow(object):
-    def setupUi(self, MainWindow):
-        MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1120, 687)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
-        MainWindow.setSizePolicy(sizePolicy)
-        icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap("../../wrench-and-hammer-tools-icon-vector-1983861.jpg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        MainWindow.setWindowIcon(icon)
-        self.centralwidget = QtWidgets.QWidget(MainWindow)
-        self.centralwidget.setObjectName("centralwidget")
-        self.label = QtWidgets.QLabel(self.centralwidget)
-        self.label.setGeometry(QtCore.QRect(50, 60, 231, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label.setFont(font)
-        self.label.setObjectName("label")
-        self.le_word_dict_file = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_word_dict_file.setGeometry(QtCore.QRect(50, 90, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_word_dict_file.setFont(font)
-        self.le_word_dict_file.setText("")
-        self.le_word_dict_file.setObjectName("le_word_dict_file")
-        self.pb_word_dict_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_word_dict_file.setGeometry(QtCore.QRect(420, 90, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_word_dict_file.setFont(font)
-        self.pb_word_dict_file.setObjectName("pb_word_dict_file")
-        self.label_2 = QtWidgets.QLabel(self.centralwidget)
-        self.label_2.setGeometry(QtCore.QRect(50, 130, 321, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_2.setFont(font)
-        self.label_2.setObjectName("label_2")
-        self.le_pron_compare_file = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_pron_compare_file.setGeometry(QtCore.QRect(50, 170, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_pron_compare_file.setFont(font)
-        self.le_pron_compare_file.setText("")
-        self.le_pron_compare_file.setObjectName("le_pron_compare_file")
-        self.pb_pron_compare_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_pron_compare_file.setGeometry(QtCore.QRect(420, 170, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_pron_compare_file.setFont(font)
-        self.pb_pron_compare_file.setObjectName("pb_pron_compare_file")
-        self.label_3 = QtWidgets.QLabel(self.centralwidget)
-        self.label_3.setGeometry(QtCore.QRect(50, 220, 241, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_3.setFont(font)
-        self.label_3.setObjectName("label_3")
-        self.le_sentence_base_dir = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_sentence_base_dir.setGeometry(QtCore.QRect(50, 250, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_sentence_base_dir.setFont(font)
-        self.le_sentence_base_dir.setText("")
-        self.le_sentence_base_dir.setObjectName("le_sentence_base_dir")
-        self.pb_sentence_base_dir = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_sentence_base_dir.setGeometry(QtCore.QRect(420, 250, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_sentence_base_dir.setFont(font)
-        self.pb_sentence_base_dir.setObjectName("pb_sentence_base_dir")
-        self.label_4 = QtWidgets.QLabel(self.centralwidget)
-        self.label_4.setGeometry(QtCore.QRect(50, 290, 361, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_4.setFont(font)
-        self.label_4.setObjectName("label_4")
-        self.le_pron_count_file = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_pron_count_file.setGeometry(QtCore.QRect(50, 320, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_pron_count_file.setFont(font)
-        self.le_pron_count_file.setText("")
-        self.le_pron_count_file.setObjectName("le_pron_count_file")
-        self.pb_pron_count_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_pron_count_file.setGeometry(QtCore.QRect(420, 320, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_pron_count_file.setFont(font)
-        self.pb_pron_count_file.setObjectName("pb_pron_count_file")
-        self.pb_produce_pron_count_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_produce_pron_count_file.setGeometry(QtCore.QRect(50, 360, 241, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_produce_pron_count_file.setFont(font)
-        self.pb_produce_pron_count_file.setObjectName("pb_produce_pron_count_file")
-        self.label_5 = QtWidgets.QLabel(self.centralwidget)
-        self.label_5.setGeometry(QtCore.QRect(50, 400, 211, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_5.setFont(font)
-        self.label_5.setObjectName("label_5")
-        self.tb_error_sentence_base = QtWidgets.QTextBrowser(self.centralwidget)
-        self.tb_error_sentence_base.setGeometry(QtCore.QRect(50, 430, 541, 192))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(8)
-        font.setBold(True)
-        font.setWeight(75)
-        self.tb_error_sentence_base.setFont(font)
-        self.tb_error_sentence_base.setObjectName("tb_error_sentence_base")
-        self.label_6 = QtWidgets.QLabel(self.centralwidget)
-        self.label_6.setGeometry(QtCore.QRect(310, 10, 91, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(20)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_6.setFont(font)
-        self.label_6.setObjectName("label_6")
-        self.label_7 = QtWidgets.QLabel(self.centralwidget)
-        self.label_7.setGeometry(QtCore.QRect(760, 10, 91, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(20)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_7.setFont(font)
-        self.label_7.setObjectName("label_7")
-        self.label_8 = QtWidgets.QLabel(self.centralwidget)
-        self.label_8.setGeometry(QtCore.QRect(610, 60, 281, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_8.setFont(font)
-        self.label_8.setObjectName("label_8")
-        self.le_sentences_file = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_sentences_file.setGeometry(QtCore.QRect(610, 90, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_sentences_file.setFont(font)
-        self.le_sentences_file.setText("")
-        self.le_sentences_file.setObjectName("le_sentences_file")
-        self.pb_sentences_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_sentences_file.setGeometry(QtCore.QRect(960, 90, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_sentences_file.setFont(font)
-        self.pb_sentences_file.setObjectName("pb_sentences_file")
-        self.label_9 = QtWidgets.QLabel(self.centralwidget)
-        self.label_9.setGeometry(QtCore.QRect(610, 140, 201, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_9.setFont(font)
-        self.label_9.setObjectName("label_9")
-        self.le_sentence = QtWidgets.QLineEdit(self.centralwidget)
-        self.le_sentence.setGeometry(QtCore.QRect(610, 170, 311, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.le_sentence.setFont(font)
-        self.le_sentence.setText("")
-        self.le_sentence.setObjectName("le_sentence")
-        self.pb_sentence = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_sentence.setGeometry(QtCore.QRect(960, 170, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_sentence.setFont(font)
-        self.pb_sentence.setObjectName("pb_sentence")
-        self.pb_analysis_pron_count_file = QtWidgets.QPushButton(self.centralwidget)
-        self.pb_analysis_pron_count_file.setGeometry(QtCore.QRect(310, 360, 111, 31))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(14)
-        font.setBold(True)
-        font.setWeight(75)
-        self.pb_analysis_pron_count_file.setFont(font)
-        self.pb_analysis_pron_count_file.setObjectName("pb_analysis_pron_count_file")
-        self.tb_sentence_score = QtWidgets.QTextBrowser(self.centralwidget)
-        self.tb_sentence_score.setGeometry(QtCore.QRect(610, 240, 311, 61))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(12)
-        font.setBold(True)
-        font.setWeight(75)
-        self.tb_sentence_score.setFont(font)
-        self.tb_sentence_score.setObjectName("tb_sentence_score")
-        self.label_10 = QtWidgets.QLabel(self.centralwidget)
-        self.label_10.setGeometry(QtCore.QRect(610, 210, 221, 21))
-        font = QtGui.QFont()
-        font.setFamily("微軟正黑體")
-        font.setPointSize(16)
-        font.setBold(True)
-        font.setWeight(75)
-        self.label_10.setFont(font)
-        self.label_10.setObjectName("label_10")
-        MainWindow.setCentralWidget(self.centralwidget)
-        self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1120, 22))
-        self.menubar.setObjectName("menubar")
-        MainWindow.setMenuBar(self.menubar)
-        self.statusbar = QtWidgets.QStatusBar(MainWindow)
-        self.statusbar.setObjectName("statusbar")
-        MainWindow.setStatusBar(self.statusbar)
 
-        self.retranslateUi(MainWindow)
-        QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
-    def retranslateUi(self, MainWindow):
-        _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "語料積分計算tool"))
-        self.label.setText(_translate("MainWindow", "選取原始字詞字點檔路徑"))
-        self.pb_word_dict_file.setText(_translate("MainWindow", "選取"))
-        self.label_2.setText(_translate("MainWindow", "選取音節單元對照檔案要存放路徑"))
-        self.pb_pron_compare_file.setText(_translate("MainWindow", "選取"))
-        self.label_3.setText(_translate("MainWindow", "選取文字基底資料夾路徑"))
-        self.pb_sentence_base_dir.setText(_translate("MainWindow", "選取"))
-        self.label_4.setText(_translate("MainWindow", "選取音節單元count字典檔要存放路徑"))
-        self.pb_pron_count_file.setText(_translate("MainWindow", "選取"))
-        self.pb_produce_pron_count_file.setText(_translate("MainWindow", "產生音節單元count字典檔"))
-        self.label_5.setText(_translate("MainWindow", "文字基底錯誤檔案列表"))
-        self.label_6.setText(_translate("MainWindow", "管理者"))
-        self.label_7.setText(_translate("MainWindow", "使用者"))
-        self.label_8.setText(_translate("MainWindow", "方法一:選取測試句子檔案路徑"))
-        self.pb_sentences_file.setText(_translate("MainWindow", "選擇"))
-        self.label_9.setText(_translate("MainWindow", "方法二:輸入測試句子"))
-        self.pb_sentence.setText(_translate("MainWindow", "產生積分"))
-        self.pb_analysis_pron_count_file.setText(_translate("MainWindow", "涵蓋率分析"))
-        self.label_10.setText(_translate("MainWindow", "單一句子積分結果如下:"))
-
+# # words_set = {}
+# # with open('pron_compare.txt', 'r', encoding='utf-8') as f:
+# #     for line in f:
+# #         word_lists = line.strip().split(',')[2:]
+# #         for word in word_lists:
+# #             if word in words_set:
+# #                 words_set[word].append(''.join(line.split(',')[1:2]))
+# #             else:
+# #                 words_set[word] = []
+# #                 words_set[word].append(''.join(line.split(',')[1:2]))
+# #     update_word_set = {word: prons for word, prons in words_set.items() if len(prons) > 1}
+# #
+# # with open('repeated_prons.txt', 'w', encoding='utf-8') as f:
+# #     for word, prons in update_word_set.items():
+# #         f.write(word + ': ' + ','.join(prons))
+# #         f.write('\n')
